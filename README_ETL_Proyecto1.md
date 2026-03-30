@@ -140,6 +140,77 @@ Tip de modelado:
 - Crea una tabla calendario (`Calendar`) para analisis temporal y relaciona con fecha de `fact_crimes_enriched.csv`.
 - Si usas tablas agregadas para visuales de KPI, evita recalcular lo mismo desde la tabla detalle para no duplicar metricas.
 
+## 5.2) Paso a paso para separar vistas y crear KPI en Power BI
+
+Objetivo:
+- Tener 9 KPI de negocio diferentes.
+- Mostrar la evolucion temporal en varias granularidades sin contarla como KPI distinto.
+
+Paso 1. Crear las paginas del reporte
+- Pagina 1: Resumen Ejecutivo.
+- Pagina 2: Evolucion Temporal.
+- Pagina 3: Analisis Intra-dia.
+- Pagina 4: Perfil de Victimas.
+- Pagina 5: Armas y Tipologia del Delito.
+
+Paso 2. Asignar KPI por pagina (sin duplicar KPI)
+- Pagina 1 (Resumen Ejecutivo):
+  - KPI 1: Incidentes totales.
+  - KPI 2: Variacion porcentual mensual.
+  - KPI 3: Porcentaje de delitos en festivos.
+  - KPI 4: Porcentaje de delitos con arma.
+- Pagina 2 (Evolucion Temporal):
+  - KPI 5: Evolucion del delito en el tiempo.
+  - Mostrar este KPI en anual, mensual, semanal y diaria (misma metrica, distintas vistas).
+- Pagina 3 (Analisis Intra-dia):
+  - KPI 6: Hora pico de delitos.
+  - KPI 7: Franja critica de 15 minutos.
+- Pagina 4 (Perfil de Victimas):
+  - KPI 8: Codigo de origen de victimas mas afectadas.
+  - KPI 9: Delitos segun sexo y edad.
+- Pagina 5 (Armas y Tipologia):
+  - Visual de apoyo A: Delitos segun tipo de arma (Matias Kupfer).
+  - Visual de apoyo B: Top delitos por anio.
+  - Nota: estos pueden presentarse como detalle de analisis; si quieres mantener exactamente 9 KPI, dejalos como visuales de soporte.
+
+Paso 3. Conectar cada pagina con sus CSV
+- Pagina 1:
+  - `kpi_overview.csv`
+  - `agg_monthly.csv`
+- Pagina 2:
+  - `agg_annual.csv`
+  - `agg_monthly.csv`
+  - `agg_weekly.csv`
+  - `agg_daily.csv`
+- Pagina 3:
+  - `agg_hourly.csv`
+  - `agg_15min.csv`
+- Pagina 4:
+  - `kpi_victim_descent_distribution.csv`
+  - `kpi_sex_age_distribution.csv`
+  - `kpi_victim_sex_distribution.csv` (apoyo)
+- Pagina 5:
+  - `kpi_weapon_type_distribution.csv`
+  - `kpi_top_crimes_by_year.csv`
+  - `kpi_case_status_distribution.csv` (apoyo)
+
+Paso 4. Visual recomendado por KPI
+- KPI 1: Tarjeta.
+- KPI 2: Tarjeta + linea mensual.
+- KPI 3: Tarjeta + linea mensual/anual.
+- KPI 4: Tarjeta + linea mensual/anual.
+- KPI 5: 4 lineas (anual, mensual, semanal, diaria) en la misma pagina.
+- KPI 6: Barras por hora.
+- KPI 7: Barras por bloque de 15 minutos.
+- KPI 8: Barras horizontales por `vict_descent`.
+- KPI 9: Matriz (`vict_sex` x `age_bucket`) con `incidents`.
+
+Paso 5. Checklist de validacion final
+- Cada KPI responde una pregunta distinta de gestion.
+- La vista temporal anual/mensual/semanal/diaria se presenta como un solo KPI de evolucion.
+- Hay al menos una visualizacion por hora y otra por 15 minutos.
+- Todos los datos del PBIX vienen desde la carpeta `output`.
+
 ## 6) Estructura sugerida de reporte Power BI
 
 - Pagina 1: Resumen ejecutivo (tarjetas KPI + tendencia anual).
