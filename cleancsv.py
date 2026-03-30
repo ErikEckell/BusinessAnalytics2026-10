@@ -9,6 +9,7 @@ import pandas as pd
 
 CRIME_DEFAULT = "Crime_Data_from_2020_to_Present.csv"
 HOLIDAY_DEFAULT = "Hoja de cálculo sin título - Hoja 1.csv"
+BASE_DIR = Path(__file__).resolve().parent
 
 
 def normalize_columns(columns: list[str]) -> list[str]:
@@ -229,14 +230,18 @@ def run_etl(crime_csv: Path, holiday_csv: Path, output_dir: Path, chunksize: int
 		chunk["is_holiday"] = chunk["holiday_name"].ne("")
 
 		chunk["vict_age"] = pd.to_numeric(chunk["vict_age"], errors="coerce")
-		chunk.loc[(chunk["vict_age"] < 0) | (chunk["vict_age"] > 120), "vict_age"] = pd.NA
+		chunk.loc[(chunk["vict_age"] == 0) | (chunk["vict_age"] < 0) | (chunk["vict_age"] > 120), "vict_age"] = pd.NA
 		chunk["age_bucket"] = chunk["vict_age"].apply(age_bucket)
 		chunk["lat"] = pd.to_numeric(chunk["lat"], errors="coerce")
 		chunk["lon"] = pd.to_numeric(chunk["lon"], errors="coerce")
 
 		for col in ["vict_sex", "vict_descent", "weapon_desc", "status_desc", "area_name", "crm_cd_desc"]:
-			chunk[col] = chunk[col].fillna("UNKNOWN").astype(str).str.strip()
-			chunk.loc[chunk[col] == "", col] = "UNKNOWN"
+			if col == "vict_sex":
+				chunk[col] = chunk[col].fillna("X").astype(str).str.strip()
+				chunk.loc[chunk[col].str.upper().isin(["", "-", "H"]), col] = "X"
+			else:
+				chunk[col] = chunk[col].fillna("UNKNOWN").astype(str).str.strip()
+				chunk.loc[chunk[col] == "", col] = "UNKNOWN"
 
 		chunk["weapon_used"] = chunk["weapon_desc"].str.upper().ne("UNKNOWN")
 
@@ -401,13 +406,13 @@ def run_etl(crime_csv: Path, holiday_csv: Path, output_dir: Path, chunksize: int
 		for (year_key, crime_desc), count in year_crime_desc.items():
 			top_crimes_by_year[(int(year_key), str(crime_desc))] += int(count)
 
-		sex_counts.update(chunk["vict_sex"].str.upper().fillna("UNKNOWN").tolist())
+		sex_counts.update(chunk["vict_sex"].str.upper().fillna("X").tolist())
 		status_counts.update(chunk["status_desc"].fillna("UNKNOWN").tolist())
 		area_counts.update(chunk["area_name"].fillna("UNKNOWN").tolist())
 		victim_descent_counts.update(chunk["vict_descent"].str.upper().fillna("UNKNOWN").tolist())
 		weapon_type_counts.update(chunk["weapon_desc"].str.upper().fillna("UNKNOWN").tolist())
 
-		sex_age_series = chunk.groupby([chunk["vict_sex"].str.upper(), "age_bucket"]).size()
+		sex_age_series = chunk.groupby([chunk["vict_sex"].str.upper().fillna("X"), "age_bucket"]).size()
 		for (sex, bucket), count in sex_age_series.items():
 			sex_age_counts[(str(sex), str(bucket))] += int(count)
 
@@ -490,9 +495,9 @@ def run_etl(crime_csv: Path, holiday_csv: Path, output_dir: Path, chunksize: int
 
 def build_parser() -> argparse.ArgumentParser:
 	parser = argparse.ArgumentParser(description="Clean and enrich LA crime data for BI reporting")
-	parser.add_argument("--crime", type=Path, default=Path(CRIME_DEFAULT), help="Path to crime CSV")
-	parser.add_argument("--holiday", type=Path, default=Path(HOLIDAY_DEFAULT), help="Path to holiday CSV")
-	parser.add_argument("--out", type=Path, default=Path("output"), help="Output folder for consolidated CSVs")
+	parser.add_argument("--crime", type=Path, default=BASE_DIR / CRIME_DEFAULT, help="Path to crime CSV")
+	parser.add_argument("--holiday", type=Path, default=BASE_DIR / HOLIDAY_DEFAULT, help="Path to holiday CSV")
+	parser.add_argument("--out", type=Path, default=BASE_DIR / "output", help="Output folder for consolidated CSVs")
 	parser.add_argument("--chunksize", type=int, default=120_000, help="Rows per processing chunk")
 	return parser
 
